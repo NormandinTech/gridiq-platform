@@ -1,0 +1,94 @@
+# GridIQ Platform — Environment Configuration
+# Copy to config/.env and fill in your values
+
+# ── Application ────────────────────────────────────────────────────────────────
+APP_NAME=GridIQ Platform
+APP_VERSION=1.0.0
+APP_ENV=development          # development | staging | production
+DEBUG=true
+LOG_LEVEL=INFO               # DEBUG | INFO | WARNING | ERROR
+
+# ── API ───────────────────────────────────────────────────────────────────────
+API_HOST=0.0.0.0
+API_PORT=8000
+API_PREFIX=/api/v1
+CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+
+# ── Database (PostgreSQL + TimescaleDB) ───────────────────────────────────────
+DATABASE_URL=postgresql+asyncpg://gridiq:password@localhost:5432/gridiq_db
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_OVERFLOW=10
+
+# ── Redis (cache + pub/sub for real-time events) ──────────────────────────────
+REDIS_URL=redis://localhost:6379/0
+REDIS_TELEMETRY_CHANNEL=gridiq:telemetry
+REDIS_ALERT_CHANNEL=gridiq:alerts
+REDIS_THREAT_CHANNEL=gridiq:threats
+
+# ── Apache Kafka (production telemetry ingestion) ─────────────────────────────
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC_TELEMETRY=gridiq.telemetry
+KAFKA_TOPIC_ALERTS=gridiq.alerts
+KAFKA_TOPIC_COMMANDS=gridiq.commands
+KAFKA_CONSUMER_GROUP=gridiq-backend
+
+# ── MQTT (IoT / AMI device ingestion) ─────────────────────────────────────────
+MQTT_BROKER_HOST=localhost
+MQTT_BROKER_PORT=1883
+MQTT_USERNAME=gridiq
+MQTT_PASSWORD=changeme
+MQTT_TOPIC_PREFIX=gridiq/
+
+# ── JWT Auth ──────────────────────────────────────────────────────────────────
+JWT_SECRET_KEY=CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_IN_PRODUCTION
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=30
+
+# ── SCADA / OT Protocol adapters ─────────────────────────────────────────────
+# Modbus TCP targets (comma-separated host:port:unit_id)
+MODBUS_TARGETS=192.168.1.100:502:1,192.168.1.101:502:1
+# DNP3 master config
+DNP3_MASTER_ADDRESS=1
+DNP3_OUTSTATION_ADDRESS=10
+# IEC 61850 MMS server
+IEC61850_SERVER_HOST=192.168.1.200
+IEC61850_SERVER_PORT=102
+
+# ── Weather API (for renewable forecasting) ───────────────────────────────────
+OPENWEATHER_API_KEY=your_openweathermap_api_key_here
+WEATHER_LAT=37.7749
+WEATHER_LON=-122.4194
+WEATHER_FORECAST_HOURS=48
+
+# ── ML Model paths ────────────────────────────────────────────────────────────
+ML_MODELS_DIR=./ml_models
+DEMAND_FORECAST_MODEL=demand_tft_v1.pt
+ANOMALY_MODEL=anomaly_isolation_forest_v1.pkl
+ASSET_HEALTH_MODEL=asset_health_xgb_v1.pkl
+
+# ── Telemetry simulation (dev mode only) ──────────────────────────────────────
+SIMULATE_TELEMETRY=true
+SIMULATION_INTERVAL_SECONDS=5
+SIMULATION_NUM_ASSETS=50
+
+# ── Alerting / notifications ──────────────────────────────────────────────────
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=alerts@gridiq.io
+SMTP_PASSWORD=your_smtp_password
+ALERT_EMAIL_RECIPIENTS=ops@yourcompany.com,soc@yourcompany.com
+
+# Slack webhook for SOC alerts
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# ── NERC CIP / Compliance ─────────────────────────────────────────────────────
+COMPLIANCE_REPORT_DIR=./reports/compliance
+AUDIT_LOG_RETENTION_DAYS=365
+NERC_REGION=WECC              # WECC | RFC | SERC | MRO | NPCC | TRE
+
+# ── Feature flags ─────────────────────────────────────────────────────────────
+FEATURE_DIGITAL_TWIN=true
+FEATURE_CYBERSECURITY=true
+FEATURE_ADVANCED_ML=true
+FEATURE_GRID_SIMULATION=false  # Phase 3

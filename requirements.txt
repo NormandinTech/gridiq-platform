@@ -1,0 +1,127 @@
+// GridIQ — Top Navigation Bar with live status
+import { Wifi, WifiOff, Bell, Settings, Zap, Menu } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useGridStore } from '../stores/gridStore'
+import { useAuthStore } from '../stores/authStore'
+import { useGridKPIs, useSystemHealth } from '../hooks/useGridData'
+
+export function TopBar({ onSettings }: { onSettings?: () => void }) {
+  const wsConnected = useGridStore((s) => s.wsConnected)
+  const openAlerts  = useGridStore((s) => s.openAlerts)
+  const toggleSidebar = useGridStore((s) => s.toggleSidebar)
+  const { data: kpis } = useGridKPIs()
+  const { data: health } = useSystemHealth()
+
+  const criticalCount = openAlerts.filter(
+    (a) => a.severity === 'critical' && a.status === 'open'
+  ).length
+
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+  return (
+    <header className="h-12 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-4 flex-shrink-0 z-30">
+      {/* Hamburger */}
+      <button
+        onClick={toggleSidebar}
+        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+      >
+        <Menu size={18} />
+      </button>
+
+      {/* Logo */}
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+          <Zap size={14} className="text-white" />
+        </div>
+        <span className="font-bold text-slate-900 dark:text-white text-sm tracking-tight">
+          GridIQ
+        </span>
+        <span className="text-[10px] text-slate-400 font-mono hidden sm:block">
+          Transmission Zone 7
+        </span>
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Live KPI strip */}
+      {kpis && (
+        <div className="hidden lg:flex items-center gap-4 text-[11px] font-mono">
+          <span className="text-slate-500">
+            <span className="text-slate-400">LOAD</span>{' '}
+            <span className="font-medium text-slate-700 dark:text-slate-300">
+              {kpis.total_load_mw.toLocaleString(undefined, { maximumFractionDigits: 0 })} MW
+            </span>
+          </span>
+          <span className="text-slate-500">
+            <span className="text-slate-400">FREQ</span>{' '}
+            <span className={clsx(
+              'font-medium',
+              Math.abs(kpis.frequency_hz - 60) > 0.3
+                ? 'text-amber-500'
+                : 'text-emerald-500',
+            )}>
+              {kpis.frequency_hz.toFixed(3)} Hz
+            </span>
+          </span>
+          <span className="text-slate-500">
+            <span className="text-slate-400">RE%</span>{' '}
+            <span className="font-medium text-emerald-500">
+              {kpis.renewable_pct.toFixed(1)}%
+            </span>
+          </span>
+        </div>
+      )}
+
+      {/* Status indicators */}
+      <div className="flex items-center gap-3">
+        {/* API health */}
+        <div
+          className={clsx(
+            'flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-full border',
+            health?.status === 'healthy'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
+              : 'bg-slate-100 border-slate-200 text-slate-500',
+          )}
+        >
+          <span className={clsx(
+            'w-1.5 h-1.5 rounded-full',
+            health?.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400',
+          )} />
+          <span className="hidden sm:block">
+            {health?.status === 'healthy' ? 'API Live' : 'Connecting...'}
+          </span>
+        </div>
+
+        {/* WebSocket status */}
+        <div
+          className={clsx(
+            'flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full border',
+            wsConnected
+              ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+              : 'bg-slate-100 border-slate-200 text-slate-400',
+          )}
+        >
+          {wsConnected
+            ? <Wifi size={11} className="text-blue-500" />
+            : <WifiOff size={11} className="text-slate-400 animate-pulse" />}
+          <span className="hidden sm:block font-mono text-[10px]">
+            {wsConnected ? 'WS' : 'Offline'}
+          </span>
+        </div>
+
+        {/* Alerts bell */}
+        <button className="relative text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+          <Bell size={16} />
+          {criticalCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center">
+              {criticalCount}
+            </span>
+          )}
+        </button>
+
+        <span className="text-[10px] font-mono text-slate-400 hidden md:block">{now}</span>
+        <button onClick={() => { useAuthStore.getState().clearAuth(); fetch('/api/v1/auth/logout', {method:'POST',credentials:'include'}) }} className="text-[10px] text-slate-400 hover:text-slate-600 hidden md:block">sign out</button>
+      </div>
+    </header>
+  )
+}
