@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060E1F">
+<title>GridIQ Field</title>
+<link rel="manifest" href="/field/manifest.json">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#060E1F;--bg2:#0D1B35;--bg3:#142644;--card:#1A2A42;
+  --blue:#3A86FF;--teal:#00D4AA;--fire:#FF6B35;--green:#22C55E;
+  --red:#FF4444;--yellow:#F59E0B;
+  --text:#E8EDF5;--muted:#6B7D94;--border:rgba(58,134,255,0.15);
+  --radius:12px;--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+
+/* APP SHELL */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  position:relative;z-index:10;flex-shrink:0;
+}
+.topbar-logo{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-0.5px}
+.topbar-logo span{color:var(--blue)}
+.topbar-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* CONTENT AREA */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  display:flex;background:var(--bg2);border-top:1px solid var(--border);
+  padding-bottom:var(--safe-bottom);flex-shrink:0;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:10px 0;cursor:pointer;transition:opacity 0.15s;
+  border:none;background:none;color:var(--muted);font-size:10px;
+}
+.nav-item.active{color:var(--blue)}
+.nav-item svg{width:22px;height:22px}
+
+/* VIEWS */
+.view{display:none;height:100%}
+.view.active{display:block}
+
+/* ── DASHBOARD VIEW ── */
+.dash-header{padding:16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.dash-greeting{font-size:13px;color:var(--muted);margin-bottom:4px}
+.dash-title{font-size:20px;font-weight:700}
+.dash-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.stat-card{
+  background:var(--card);border-radius:var(--radius);padding:14px;
+  border:1px solid var(--border);
+}
+.stat-card.critical{border-color:rgba(255,68,68,0.3);background:rgba(255,68,68,0.06)}
+.stat-card.warning{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06)}
+.stat-card.ok{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.06)}
+.stat-card.info{border-color:rgba(58,134,255,0.2)}
+.stat-num{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.stat-card.critical .stat-num{color:var(--red)}
+.stat-card.warning .stat-num{color:var(--yellow)}
+.stat-card.ok .stat-num{color:var(--green)}
+.stat-card.info .stat-num{color:var(--blue)}
+
+.section-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px 8px;
+}
+.section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.section-action{font-size:12px;color:var(--blue)}
+
+/* ALERT CARDS */
+.alert-list{padding:0 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:16px}
+.alert-card{
+  background:var(--card);border-radius:var(--radius);padding:14px;
+  border:1px solid var(--border);display:flex;gap:12px;align-items:flex-start;
+  cursor:pointer;transition:background 0.15s;
+}
+.alert-card:active{background:var(--bg3)}
+.alert-badge{
+  width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:16px;
+}
+.badge-critical{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3)}
+.badge-warning{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3)}
+.badge-ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2)}
+.alert-body{flex:1;min-width:0}
+.alert-title{font-size:14px;font-weight:600;margin-bottom:3px}
+.alert-sub{font-size:12px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.tag-critical{background:rgba(255,68,68,0.15);color:var(--red)}
+.tag-warning{background:rgba(245,158,11,0.15);color:var(--yellow)}
+.tag-ok{background:rgba(34,197,94,0.1);color:var(--green)}
+.tag-blue{background:rgba(58,134,255,0.15);color:var(--blue)}
+.alert-arrow{color:var(--muted);align-self:center;flex-shrink:0}
+
+/* ── WORK ORDERS VIEW ── */
+.filter-bar{
+  display:flex;gap:8px;padding:12px 16px;overflow-x:auto;
+  border-bottom:1px solid var(--border);background:var(--bg2);
+}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{
+  flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;
+  font-weight:500;border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;
+}
+.filter-chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+.work-list{padding:12px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+.work-card{
+  background:var(--card);border-radius:var(--radius);border:1px solid var(--border);
+  overflow:hidden;cursor:pointer;transition:background 0.15s;
+}
+.work-card:active{background:var(--bg3)}
+.work-card-header{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border-bottom:1px solid var(--border);
+}
+.priority-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0}
+.work-id{font-size:10px;color:var(--muted);font-family:monospace}
+.work-title{font-size:14px;font-weight:600}
+.work-card-body{padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.work-meta{display:flex;flex-direction:column;gap:4px}
+.work-location{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.work-due{font-size:11px;color:var(--yellow)}
+.work-actions{display:flex;gap:8px}
+.btn-nav{
+  display:flex;align-items:center;gap:5px;padding:7px 12px;
+  background:var(--blue);border-radius:8px;font-size:12px;
+  color:#fff;font-weight:500;border:none;cursor:pointer;
+}
+.btn-nav-outline{
+  display:flex;align-items:center;gap:5px;padding:7px 12px;
+  border:1px solid var(--border);border-radius:8px;font-size:12px;
+  color:var(--muted);background:transparent;cursor:pointer;
+}
+
+/* ── MAP VIEW ── */
+.map-container{position:relative;height:100%;background:var(--bg2)}
+.map-placeholder{
+  width:100%;height:calc(100% - 120px);background:var(--bg3);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:var(--muted);font-size:14px;
+}
+.map-placeholder svg{width:48px;height:48px;opacity:0.3}
+.map-legend{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding:12px 16px;display:flex;gap:16px;flex-wrap:wrap;
+}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.map-pins{position:absolute;top:0;left:0;right:0;bottom:120px;pointer-events:none}
+.map-pin{
+  position:absolute;width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;border:2px solid var(--bg);
+  pointer-events:all;cursor:pointer;transition:transform 0.15s;
+}
+.map-pin:active{transform:scale(1.15)}
+.pin-critical{background:var(--red);color:#fff}
+.pin-warning{background:var(--yellow);color:#000}
+.pin-ok{background:var(--green);color:#fff}
+.map-grid{
+  width:100%;height:100%;
+  background-image:
+    linear-gradient(rgba(58,134,255,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(58,134,255,0.06) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+/* fake roads */
+.road{position:absolute;background:rgba(255,255,255,0.04)}
+.road-h{height:2px;left:0;right:0}
+.road-v{width:2px;top:0;bottom:0}
+
+/* ── DETAIL PANEL ── */
+.detail-overlay{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(6,14,31,0.85);backdrop-filter:blur(4px);
+  display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.detail-overlay.open{opacity:1;pointer-events:all}
+.detail-sheet{
+  width:100%;background:var(--bg2);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--border);
+  padding-bottom:calc(24px + var(--safe-bottom));
+  max-height:85vh;overflow-y:auto;
+  transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.detail-overlay.open .detail-sheet{transform:translateY(0)}
+.detail-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.detail-header{padding:16px 20px;border-bottom:1px solid var(--border)}
+.detail-type{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.detail-name{font-size:20px;font-weight:700;margin-bottom:4px}
+.detail-location{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.detail-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin:0}
+.metric{background:var(--bg2);padding:14px;text-align:center}
+.metric-val{font-size:22px;font-weight:700;margin-bottom:2px}
+.metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.detail-actions{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.btn-full{
+  width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.detail-notes{padding:0 20px 16px}
+.notes-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.notes-input{
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px;color:var(--text);font-size:14px;resize:none;
+  font-family:inherit;
+}
+.notes-input:focus{outline:none;border-color:var(--blue)}
+
+/* ── PROFILE VIEW ── */
+.profile-hero{
+  background:var(--bg2);padding:24px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;
+}
+.avatar{
+  width:56px;height:56px;border-radius:50%;background:var(--blue);
+  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;
+}
+.profile-name{font-size:18px;font-weight:700}
+.profile-role{font-size:13px;color:var(--muted)}
+.profile-list{padding:16px}
+.profile-section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 4px}
+.profile-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px;background:var(--card);border-radius:10px;margin-bottom:8px;
+  border:1px solid var(--border);
+}
+.profile-item-left{display:flex;align-items:center;gap:12px}
+.profile-item-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.profile-item-label{font-size:14px;font-weight:500}
+.profile-item-sub{font-size:12px;color:var(--muted)}
+.toggle{
+  width:44px;height:26px;border-radius:13px;background:var(--bg3);
+  border:1px solid var(--border);position:relative;cursor:pointer;transition:background 0.2s;
+}
+.toggle.on{background:var(--blue);border-color:var(--blue)}
+.toggle::after{
+  content:'';position:absolute;width:20px;height:20px;border-radius:50%;
+  background:#fff;top:2px;left:2px;transition:transform 0.2s;
+}
+.toggle.on::after{transform:translateX(18px)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">Grid<span>IQ</span> Field</div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      Live
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view active" id="view-dash">
+      <div class="dash-header">
+        <div class="dash-greeting">Good morning, Field Team</div>
+        <div class="dash-title">Today's Grid Status</div>
+      </div>
+
+      <div class="dash-stats">
+        <div class="stat-card critical">
+          <div class="stat-num">3</div>
+          <div class="stat-label">Critical Alerts</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-num">7</div>
+          <div class="stat-label">Warnings</div>
+        </div>
+        <div class="stat-card ok">
+          <div class="stat-num">142</div>
+          <div class="stat-label">Spans Clear</div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-num">12</div>
+          <div class="stat-label">Open Work Orders</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Priority Alerts</div>
+        <div class="section-action">See all</div>
+      </div>
+
+      <div class="alert-list">
+        <div class="alert-card" onclick="openDetail('veg1')">
+          <div class="alert-badge badge-critical">🌲</div>
+          <div class="alert-body">
+            <div class="alert-title">Sierra 230kV — Span 14</div>
+            <div class="alert-sub">Vegetation clearance: 0.8m — NERC FAC-003 violation</div>
+            <div class="alert-tags">
+              <span class="tag tag-critical">CRITICAL</span>
+              <span class="tag tag-blue">Vegetation</span>
+              <span class="tag tag-blue">FAC-003</span>
+            </div>
+          </div>
+          <div class="alert-arrow">›</div>
+        </div>
+
+        <div class="alert-card" onclick="openDetail('fault1')">
+          <div class="alert-badge badge-critical">⚡</div>
+          <div class="alert-body">
+            <div class="alert-title">Transformer TXN-001</div>
+            <div class="alert-sub">Conductor sag exceeding clearance limit</div>
+            <div class="alert-tags">
+              <span class="tag tag-critical">CRITICAL</span>
+              <span class="tag tag-blue">Fault</span>
+            </div>
+          </div>
+          <div class="alert-arrow">›</div>
+        </div>
+
+        <div class="alert-card" onclick="openDetail('veg2')">
+          <div class="alert-badge badge-warning">🌲</div>
+          <div class="alert-body">
+            <div class="alert-title">North Line — Span 7</div>
+            <div class="alert-sub">Vegetation clearance: 1.4m — approaching limit</div>
+            <div class="alert-tags">
+              <span class="tag tag-warning">WARNING</span>
+              <span class="tag tag-blue">Vegetation</span>
+            </div>
+          </div>
+          <div class="alert-arrow">›</div>
+        </div>
+
+        <div class="alert-card" onclick="openDetail('fault2')">
+          <div class="alert-badge badge-warning">⚡</div>
+          <div class="alert-body">
+            <div class="alert-title">BESS-2 South Substation</div>
+            <div class="alert-sub">Cell thermal runaway precursor detected</div>
+            <div class="alert-tags">
+              <span class="tag tag-warning">WARNING</span>
+              <span class="tag tag-blue">Fault</span>
+              <span class="tag tag-blue">BESS</span>
+            </div>
+          </div>
+          <div class="alert-arrow">›</div>
+        </div>
+
+        <div class="alert-card" onclick="openDetail('ok1')">
+          <div class="alert-badge badge-ok">✓</div>
+          <div class="alert-body">
+            <div class="alert-title">West Feeder — All Spans</div>
+            <div class="alert-sub">28 spans inspected — all clear</div>
+            <div class="alert-tags">
+              <span class="tag tag-ok">CLEAR</span>
+              <span class="tag tag-blue">Vegetation</span>
+            </div>
+          </div>
+          <div class="alert-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORK ORDERS VIEW -->
+    <div class="view" id="view-work">
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="filterWork(this,'all')">All (12)</button>
+        <button class="filter-chip" onclick="filterWork(this,'critical')">Critical (3)</button>
+        <button class="filter-chip" onclick="filterWork(this,'vegetation')">Vegetation (7)</button>
+        <button class="filter-chip" onclick="filterWork(this,'fault')">Fault (5)</button>
+        <button class="filter-chip" onclick="filterWork(this,'mine')">Assigned to Me (4)</button>
+      </div>
+      <div class="work-list">
+
+        <div class="work-card" onclick="openDetail('veg1')">
+          <div class="work-card-header">
+            <div class="priority-bar" style="background:var(--red)"></div>
+            <div style="flex:1">
+              <div class="work-id">WO-2026-0847</div>
+              <div class="work-title">Vegetation trim — Sierra 230kV Span 14</div>
+            </div>
+          </div>
+          <div class="work-card-body">
+            <div class="work-meta">
+              <div class="work-location">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                39.7621° N, 121.6219° W
+              </div>
+              <div class="work-due">Due: Today — URGENT</div>
+            </div>
+            <div class="work-actions">
+              <button class="btn-nav" onclick="navigate(event,39.7621,-121.6219)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card" onclick="openDetail('fault1')">
+          <div class="work-card-header">
+            <div class="priority-bar" style="background:var(--red)"></div>
+            <div style="flex:1">
+              <div class="work-id">WO-2026-0846</div>
+              <div class="work-title">Inspect conductor sag — TXN-001</div>
+            </div>
+          </div>
+          <div class="work-card-body">
+            <div class="work-meta">
+              <div class="work-location">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                39.7589° N, 121.6180° W
+              </div>
+              <div class="work-due">Due: Today — URGENT</div>
+            </div>
+            <div class="work-actions">
+              <button class="btn-nav" onclick="navigate(event,39.7589,-121.6180)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card" onclick="openDetail('veg2')">
+          <div class="work-card-header">
+            <div class="priority-bar" style="background:var(--yellow)"></div>
+            <div style="flex:1">
+              <div class="work-id">WO-2026-0844</div>
+              <div class="work-title">Vegetation monitoring — North Line Span 7</div>
+            </div>
+          </div>
+          <div class="work-card-body">
+            <div class="work-meta">
+              <div class="work-location">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                39.7701° N, 121.6350° W
+              </div>
+              <div class="work-due" style="color:var(--muted)">Due: Mar 29</div>
+            </div>
+            <div class="work-actions">
+              <button class="btn-nav" onclick="navigate(event,39.7701,-121.6350)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card" onclick="openDetail('fault2')">
+          <div class="work-card-header">
+            <div class="priority-bar" style="background:var(--yellow)"></div>
+            <div style="flex:1">
+              <div class="work-id">WO-2026-0843</div>
+              <div class="work-title">BESS thermal inspection — South Substation</div>
+            </div>
+          </div>
+          <div class="work-card-body">
+            <div class="work-meta">
+              <div class="work-location">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                39.7543° N, 121.6090° W
+              </div>
+              <div class="work-due" style="color:var(--muted)">Due: Mar 30</div>
+            </div>
+            <div class="work-actions">
+              <button class="btn-nav" onclick="navigate(event,39.7543,-121.6090)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MAP VIEW -->
+    <div class="view" id="view-map">
+      <div class="map-container">
+        <div class="map-placeholder">
+          <div class="map-grid" style="position:relative">
+            <!-- fake roads -->
+            <div class="road road-h" style="top:35%"></div>
+            <div class="road road-h" style="top:65%"></div>
+            <div class="road road-v" style="left:30%"></div>
+            <div class="road road-v" style="left:70%"></div>
+          </div>
+          <!-- map pins -->
+          <div class="map-pins">
+            <div class="map-pin pin-critical" style="top:28%;left:42%" onclick="openDetail('veg1')" title="Sierra 230kV Span 14">!</div>
+            <div class="map-pin pin-critical" style="top:48%;left:58%" onclick="openDetail('fault1')" title="TXN-001">!</div>
+            <div class="map-pin pin-warning" style="top:20%;left:25%" onclick="openDetail('veg2')" title="North Line Span 7">~</div>
+            <div class="map-pin pin-warning" style="top:65%;left:35%" onclick="openDetail('fault2')" title="BESS-2">~</div>
+            <div class="map-pin pin-ok" style="top:55%;left:72%" onclick="openDetail('ok1')" title="West Feeder">✓</div>
+            <div class="map-pin pin-ok" style="top:35%;left:78%" title="Clear">✓</div>
+            <div class="map-pin pin-ok" style="top:75%;left:60%" title="Clear">✓</div>
+          </div>
+        </div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Critical</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Warning</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Clear</div>
+          <div style="font-size:11px;color:var(--muted);margin-left:auto">Tap pin for details</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE VIEW -->
+    <div class="view" id="view-profile">
+      <div class="profile-hero">
+        <div class="avatar">SN</div>
+        <div>
+          <div class="profile-name">Field Technician</div>
+          <div class="profile-role">NormandinTECH · GridIQ Field</div>
+        </div>
+      </div>
+      <div class="profile-list">
+        <div class="profile-section-title">Connectivity</div>
+        <div class="profile-item">
+          <div class="profile-item-left">
+            <div class="profile-item-icon" style="background:rgba(34,197,94,0.1)">📶</div>
+            <div>
+              <div class="profile-item-label">Offline Mode</div>
+              <div class="profile-item-sub">Cache work orders for no-signal areas</div>
+            </div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-left">
+            <div class="profile-item-icon" style="background:rgba(58,134,255,0.1)">🔔</div>
+            <div>
+              <div class="profile-item-label">Push Notifications</div>
+              <div class="profile-item-sub">Critical alerts sent to your phone</div>
+            </div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+
+        <div class="profile-section-title" style="margin-top:16px">Platform</div>
+        <div class="profile-item">
+          <div class="profile-item-left">
+            <div class="profile-item-icon" style="background:rgba(58,134,255,0.1)">🌐</div>
+            <div>
+              <div class="profile-item-label">GridIQ Dashboard</div>
+              <div class="profile-item-sub">gridiq.ink</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--blue)">Open →</div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-left">
+            <div class="profile-item-icon" style="background:rgba(255,107,53,0.1)">📍</div>
+            <div>
+              <div class="profile-item-label">Server</div>
+              <div class="profile-item-sub">165.232.147.17 · San Francisco</div>
+            </div>
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+        </div>
+        <div class="profile-item">
+          <div class="profile-item-left">
+            <div class="profile-item-icon" style="background:rgba(0,212,170,0.1)">📋</div>
+            <div>
+              <div class="profile-item-label">App Version</div>
+              <div class="profile-item-sub">GridIQ Field v1.0.0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item active" id="nav-dash" onclick="switchView('dash')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" id="nav-work" onclick="switchView('work')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Work Orders
+    </button>
+    <button class="nav-item" id="nav-map" onclick="switchView('map')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      Map
+    </button>
+    <button class="nav-item" id="nav-profile" onclick="switchView('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+
+</div><!-- /app -->
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-sheet" id="detailSheet">
+    <div class="detail-handle"></div>
+    <div class="detail-header">
+      <div class="detail-type" id="detailType">VEGETATION ALERT</div>
+      <div class="detail-name" id="detailName">Sierra 230kV — Span 14</div>
+      <div class="detail-location" id="detailLocation">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        39.7621° N, 121.6219° W
+      </div>
+    </div>
+    <div class="detail-metrics" id="detailMetrics">
+      <div class="metric">
+        <div class="metric-val" style="color:var(--red)" id="m1val">0.8m</div>
+        <div class="metric-label" id="m1label">Clearance</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" style="color:var(--red)" id="m2val">CRIT</div>
+        <div class="metric-label" id="m2label">Status</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" style="color:var(--yellow)" id="m3val">TODAY</div>
+        <div class="metric-label" id="m3label">Due</div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn-full btn-primary" id="detailNavBtn" onclick="navigate(event,39.7621,-121.6219)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        Navigate to Location
+      </button>
+      <button class="btn-full btn-secondary" onclick="markComplete()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Mark Complete
+      </button>
+    </div>
+    <div class="detail-notes">
+      <div class="notes-label">Field Notes</div>
+      <textarea class="notes-input" rows="3" placeholder="Add inspection notes..."></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const details = {
+  veg1: {
+    type: 'VEGETATION ALERT — FAC-003 VIOLATION',
+    name: 'Sierra 230kV — Span 14',
+    location: '39.7621° N, 121.6219° W',
+    lat: 39.7621, lng: -121.6219,
+    m1val: '0.8m', m1label: 'Clearance', m1color: 'var(--red)',
+    m2val: 'CRIT', m2label: 'Status', m2color: 'var(--red)',
+    m3val: 'TODAY', m3label: 'Due', m3color: 'var(--yellow)',
+  },
+  fault1: {
+    type: 'FAULT DETECTION — TRANSMISSION LINE',
+    name: 'Transformer TXN-001',
+    location: '39.7589° N, 121.6180° W',
+    lat: 39.7589, lng: -121.6180,
+    m1val: 'SAG', m1label: 'Fault Type', m1color: 'var(--red)',
+    m2val: 'CRIT', m2label: 'Status', m2color: 'var(--red)',
+    m3val: 'TODAY', m3label: 'Due', m3color: 'var(--yellow)',
+  },
+  veg2: {
+    type: 'VEGETATION ALERT — WARNING',
+    name: 'North Line — Span 7',
+    location: '39.7701° N, 121.6350° W',
+    lat: 39.7701, lng: -121.6350,
+    m1val: '1.4m', m1label: 'Clearance', m1color: 'var(--yellow)',
+    m2val: 'WARN', m2label: 'Status', m2color: 'var(--yellow)',
+    m3val: 'MAR 29', m3label: 'Due', m3color: 'var(--muted)',
+  },
+  fault2: {
+    type: 'FAULT DETECTION — BESS',
+    name: 'BESS-2 South Substation',
+    location: '39.7543° N, 121.6090° W',
+    lat: 39.7543, lng: -121.6090,
+    m1val: 'THERM', m1label: 'Fault Type', m1color: 'var(--yellow)',
+    m2val: 'WARN', m2label: 'Status', m2color: 'var(--yellow)',
+    m3val: 'MAR 30', m3label: 'Due', m3color: 'var(--muted)',
+  },
+  ok1: {
+    type: 'INSPECTION COMPLETE',
+    name: 'West Feeder — All Spans',
+    location: '39.7612° N, 121.5980° W',
+    lat: 39.7612, lng: -121.5980,
+    m1val: '28', m1label: 'Spans', m1color: 'var(--green)',
+    m2val: 'CLEAR', m2label: 'Status', m2color: 'var(--green)',
+    m3val: 'DONE', m3label: 'Due', m3color: 'var(--green)',
+  },
+};
+
+function openDetail(id) {
+  const d = details[id];
+  if (!d) return;
+  document.getElementById('detailType').textContent = d.type;
+  document.getElementById('detailName').textContent = d.name;
+  document.getElementById('detailLocation').innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${d.location}`;
+  document.getElementById('m1val').textContent = d.m1val;
+  document.getElementById('m1val').style.color = d.m1color;
+  document.getElementById('m1label').textContent = d.m1label;
+  document.getElementById('m2val').textContent = d.m2val;
+  document.getElementById('m2val').style.color = d.m2color;
+  document.getElementById('m2label').textContent = d.m2label;
+  document.getElementById('m3val').textContent = d.m3val;
+  document.getElementById('m3val').style.color = d.m3color;
+  document.getElementById('m3label').textContent = d.m3label;
+  document.getElementById('detailNavBtn').onclick = (e) => navigate(e, d.lat, d.lng);
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail(e) {
+  if (e.target === document.getElementById('detailOverlay')) {
+    document.getElementById('detailOverlay').classList.remove('open');
+  }
+}
+
+function navigate(e, lat, lng) {
+  e.stopPropagation();
+  window.open(`https://maps.google.com/?q=${lat},${lng}&navigate=yes`, '_blank');
+}
+
+function markComplete() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  alert('Work order marked complete. Syncing to GridIQ...');
+}
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+function filterWork(el, filter) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
